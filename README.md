@@ -16,5 +16,6 @@ libraryDependencies += "org.galaxio" %% "gatling-jdbc-plugin" % <version> % Test
 Commands to build and deploy to local maven .m2 repository:
 sbt package
 sbt publishM2 
+
 ## Example Scenarios
 Examples [here](https://github.com/galax-io/gatling-jdbc-plugin/tree/master/src/test)
