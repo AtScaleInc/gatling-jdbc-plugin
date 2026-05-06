@@ -17,5 +17,8 @@ Commands to build and deploy to local maven .m2 repository:
 sbt package
 sbt publishM2 
 Use git tag to mark the version you want to produce before running sbt publishM2, e.g. git tag -a v0.14.3-atscale -m "Release v0.14.3-atscale"
+All changes have to be committed so that you don't get a snapshot version.
+If you need to make a change delete the tag:  git tag -d v0.14.3-atscale
+retag, then run sbt publishM2 again.
 ## Example Scenarios
 Examples [here](https://github.com/galax-io/gatling-jdbc-plugin/tree/master/src/test)
