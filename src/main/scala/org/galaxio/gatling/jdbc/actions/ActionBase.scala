@@ -30,6 +30,7 @@ trait ActionBase {
       session.markAsFailed.set("jdbcFailed", true).set("successful", false).set("message", message.getOrElse(""))
     else session.set("jdbcFailed", false).set("successful", true).set("message", message.getOrElse(""))
 
+
     ctx.coreComponents.statsEngine.logResponse(
       session.scenario,
       session.groups,
