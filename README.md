@@ -16,6 +16,6 @@ libraryDependencies += "org.galaxio" %% "gatling-jdbc-plugin" % <version> % Test
 Commands to build and deploy to local maven .m2 repository:
 sbt package
 sbt publishM2 
-
+Use git tag to mark the version you want to produce before running sbt publishM2, e.g. git tag -a v0.14.3-atscale -m "Release v0.14.3-atscale"
 ## Example Scenarios
 Examples [here](https://github.com/galax-io/gatling-jdbc-plugin/tree/master/src/test)
