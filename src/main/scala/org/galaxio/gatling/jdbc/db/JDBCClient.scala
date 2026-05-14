@@ -9,6 +9,10 @@ import java.util.concurrent.ExecutorService
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
+import java.security.MessageDigest
+import java.nio.charset.StandardCharsets
+import java.util.HexFormat
+
 object JDBCClient {
   object Interpolator {
     type ParamToIndexesMap = Map[String, List[Int]]
@@ -106,6 +110,35 @@ class JDBCClient(pool: HikariDataSource, blockingPool: ExecutorService) {
 
   def executeSelect[U](sql: String, params: Seq[(String, ParamVal)])(s: List[Map[String, Any]] => U, f: Throwable => U): Unit =
     withCompletion(preparedStatementResource(sql, params.toMap).use(_.executeQuery.map(_.iterator.toList)))(s, f)
+
+  // New: iterate the ResultSet lazily, feeding a SHA-256 MessageDigest with a deterministic
+  // string representation of each row. On completion return the lowercase hex string of the digest.
+  def executeSelectSha256[U](sql: String, params: Seq[(String, ParamVal)])(s: String => U, f: Throwable => U): Unit =
+    withCompletion(
+      preparedStatementResource(sql, params.toMap).use(_.executeQuery.map { rsWrapper =>
+        val digest = MessageDigest.getInstance("SHA-256")
+
+        // Iterate lazily; rsWrapper.iterator yields Map[String, Any] for each row.
+        val it = rsWrapper.iterator
+        while (it.hasNext) {
+          val row = it.next()
+          // Produce deterministic string: sort keys so two runs with same data order-insensitive maps match.
+          val sb = new StringBuilder
+          row.toSeq.sortBy(_._1).foreach { case (k, v) =>
+            sb.append(k).append("=")
+            sb.append(Option(v).map(_.toString).getOrElse("null"))
+            sb.append(";") // separator between columns
+          }
+          sb.append('\n') // separator between rows
+          val rowBytes = sb.toString.getBytes(StandardCharsets.UTF_8)
+          digest.update(rowBytes)
+        }
+
+        val hashBytes = digest.digest()
+        // lowercase hex using Java 17+ HexFormat
+        HexFormat.of().withLowerCase().formatHex(hashBytes)
+      }),
+    )(s, f)
 
   def executeUpdate[U](sqlQuery: String, params: Seq[(String, ParamVal)])(s: Int => U, f: Throwable => U): Unit =
     withCompletion(preparedStatementResource(sqlQuery, params.toMap).use(_.executeUpdate))(s, f)

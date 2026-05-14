@@ -1,6 +1,7 @@
 package org.galaxio.gatling.jdbc.actions
 
 import io.gatling.commons.stats.Status
+import io.gatling.commons.stats.KO
 import io.gatling.core.action.Action
 import io.gatling.core.session.Session
 import io.gatling.core.structure.ScenarioContext
@@ -23,6 +24,13 @@ trait ActionBase {
       responseCode: Option[String],
       message: Option[String],
   ): Unit = {
+    // If the result status is KO, mark the session as failed so downstream actions see it
+    // Also attach explicit attributes so Java DSL users can read it reliably
+    val sessionToUse = if (status == KO)
+      session.markAsFailed.set("jdbcFailed", true).set("successful", false).set("message", message.getOrElse(""))
+    else session.set("jdbcFailed", false).set("successful", true).set("message", message.getOrElse(""))
+
+
     ctx.coreComponents.statsEngine.logResponse(
       session.scenario,
       session.groups,
@@ -33,6 +41,6 @@ trait ActionBase {
       responseCode,
       message,
     )
-    next ! session.logGroupRequestTimings(sent, received)
+    next ! sessionToUse.logGroupRequestTimings(sent, received)
   }
 }
